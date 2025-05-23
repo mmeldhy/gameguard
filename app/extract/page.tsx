@@ -98,27 +98,18 @@ export default function ExtractPage() {
       // Split the extracted data into watermark and hash
       const parts = extractedRawData.split('::HASH::');
       let extractedWatermarkText = '';
-      let embeddedHash = '';
+      // let embeddedHash = '';
 
       if (parts.length === 2) {
         extractedWatermarkText = parts[0];
-        embeddedHash = parts[1];
+        // embeddedHash = parts[1];
       } else {
         // If splitting fails, assume the entire extracted data is the watermark (no hash embedded or corrupted delimiter)
         extractedWatermarkText = extractedRawData;
       }
       
-      // Calculate the current hash of the extracted watermark
-      const currentWatermarkHash = await sha256(extractedWatermarkText);
-
-      // Verify integrity
-      if (embeddedHash && currentWatermarkHash === embeddedHash) {
-        setExtractedWatermark(`Watermark: "${extractedWatermarkText}"\nIntegrity: VERIFIED`);
-      } else if (embeddedHash && currentWatermarkHash !== embeddedHash) {
-        setExtractedWatermark(`Watermark: "${extractedWatermarkText}"\nIntegrity: FAILED (Watermark may have been tampered with or corrupted)`);
-      } else {
-        setExtractedWatermark(`Watermark: "${extractedWatermarkText}"\nIntegrity: UNKNOWN (No hash embedded or extraction issue)`);
-      }
+      // Hanya tampilkan watermark, sembunyikan integrity
+      setExtractedWatermark(`Watermark: "${extractedWatermarkText}"`);
 
       setIsProcessing(false)
     } catch (error) {
