@@ -1,3 +1,4 @@
+// app/embed/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -12,10 +13,20 @@ import { FileUpload } from "@/components/file-upload"
 import { ModelViewer } from "@/components/model-viewer"
 import { Spinner } from "@/components/ui/spinner"
 import { embedQIM } from "@/lib/steganography/qim"
-import { embedDeltaAdditive } from "@/lib/steganography/delta"
-import { embedHybrid } from "@/lib/steganography/hybrid"
 import { downloadBlob } from "@/lib/utils"
 import type { GLTF } from "three-stdlib"
+
+// Asumsi fungsi sha256 ini ditambahkan di lib/utils.ts atau sebagai helper lokal
+// Jika Anda ingin menggunakannya di sini, Anda bisa menyertakannya langsung atau mengimpornya.
+// Untuk tujuan demonstrasi ini, mari kita sertakan langsung di sini.
+async function sha256(message: string): Promise<string> {
+  const textEncoder = new TextEncoder();
+  const data = textEncoder.encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hexHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hexHash;
+}
 
 export default function EmbedPage() {
   const [file, setFile] = useState<File | null>(null)
@@ -67,21 +78,29 @@ export default function EmbedPage() {
     setIsProcessing(true)
 
     try {
+      // Generate hash of the watermark
+      const watermarkHash = await sha256(watermark)
+
+      // Combine watermark and its hash with a delimiter
+      // Using a delimiter that is unlikely to be part of the actual watermark text,
+      // and not used in binaryToText conversion
+      const dataToEmbed = `${watermark}::HASH::${watermarkHash}`
+
       // Apply the selected steganography method
       let modifiedModel: GLTF
 
       switch (method) {
         case "qim":
-          modifiedModel = embedQIM(gltfModel, watermark)
+          modifiedModel = embedQIM(gltfModel, dataToEmbed)
           break
         case "delta":
-          modifiedModel = embedDeltaAdditive(gltfModel, watermark)
+          modifiedModel = embedDeltaAdditive(gltfModel, dataToEmbed)
           break
         case "hybrid":
-          modifiedModel = embedHybrid(gltfModel, watermark)
+          modifiedModel = embedHybrid(gltfModel, dataToEmbed)
           break
         default:
-          modifiedModel = embedQIM(gltfModel, watermark)
+          modifiedModel = embedQIM(gltfModel, dataToEmbed)
       }
 
       setProcessedModel(modifiedModel)
@@ -191,8 +210,6 @@ export default function EmbedPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="qim">Quantization Index Modulation (QIM)</SelectItem>
-                        <SelectItem value="delta">Delta Additive</SelectItem>
-                        <SelectItem value="hybrid">Hybrid (Both Methods)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

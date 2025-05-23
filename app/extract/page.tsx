@@ -1,3 +1,4 @@
+// app/extract/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -12,9 +13,19 @@ import { FileUpload } from "@/components/file-upload"
 import { ModelViewer } from "@/components/model-viewer"
 import { Spinner } from "@/components/ui/spinner"
 import { extractQIM } from "@/lib/steganography/qim"
-import { extractDeltaAdditive } from "@/lib/steganography/delta"
-import { extractHybrid } from "@/lib/steganography/hybrid"
 import type { GLTF } from "three-stdlib"
+
+// Asumsi fungsi sha256 ini ditambahkan di lib/utils.ts atau sebagai helper lokal
+// Jika Anda ingin menggunakannya di sini, Anda bisa menyertakannya langsung atau mengimpornya.
+// Untuk tujuan demonstrasi ini, mari kita sertakan langsung di sini.
+async function sha256(message: string): Promise<string> {
+  const textEncoder = new TextEncoder();
+  const data = textEncoder.encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hexHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hexHash;
+}
 
 export default function ExtractPage() {
   const [file, setFile] = useState<File | null>(null)
@@ -64,28 +75,59 @@ export default function ExtractPage() {
     setIsProcessing(true)
 
     try {
-      // Apply the selected steganography method
-      let extractedText: string
-      const length = Number.parseInt(watermarkLength)
+      // The hash length for SHA-256 is 64 characters (hexadecimal)
+      // The delimiter "::HASH::" is 8 characters long
+      // So, total additional length for hash and delimiter is 64 + 8 = 72 characters.
+      // Adjust the expected length to include the hash and delimiter.
+      const originalWatermarkLength = Number.parseInt(watermarkLength);
+      const expectedTotalLength = originalWatermarkLength + 8 + 64; // watermark + '::HASH::' + hash
 
+      // Apply the selected steganography method
+      let extractedRawData: string
+      
       switch (method) {
         case "qim":
-          extractedText = extractQIM(gltfModel, length)
+          extractedRawData = extractQIM(gltfModel, expectedTotalLength)
           break
         case "delta":
-          extractedText = extractDeltaAdditive(gltfModel, length)
+          extractedRawData = extractDeltaAdditive(gltfModel, expectedTotalLength)
           break
         case "hybrid":
-          extractedText = extractHybrid(gltfModel, length)
+          extractedRawData = extractHybrid(gltfModel, expectedTotalLength)
           break
         default:
-          extractedText = extractQIM(gltfModel, length)
+          extractedRawData = extractQIM(gltfModel, expectedTotalLength)
       }
 
-      setExtractedWatermark(extractedText)
+      // Split the extracted data into watermark and hash
+      const parts = extractedRawData.split('::HASH::');
+      let extractedWatermarkText = '';
+      let embeddedHash = '';
+
+      if (parts.length === 2) {
+        extractedWatermarkText = parts[0];
+        embeddedHash = parts[1];
+      } else {
+        // If splitting fails, assume the entire extracted data is the watermark (no hash embedded or corrupted delimiter)
+        extractedWatermarkText = extractedRawData;
+      }
+      
+      // Calculate the current hash of the extracted watermark
+      const currentWatermarkHash = await sha256(extractedWatermarkText);
+
+      // Verify integrity
+      if (embeddedHash && currentWatermarkHash === embeddedHash) {
+        setExtractedWatermark(`Watermark: "${extractedWatermarkText}"\nIntegrity: VERIFIED`);
+      } else if (embeddedHash && currentWatermarkHash !== embeddedHash) {
+        setExtractedWatermark(`Watermark: "${extractedWatermarkText}"\nIntegrity: FAILED (Watermark may have been tampered with or corrupted)`);
+      } else {
+        setExtractedWatermark(`Watermark: "${extractedWatermarkText}"\nIntegrity: UNKNOWN (No hash embedded or extraction issue)`);
+      }
+
       setIsProcessing(false)
     } catch (error) {
       console.error("Failed to extract watermark:", error)
+      setExtractedWatermark("Error extracting watermark.")
       setIsProcessing(false)
     }
   }
@@ -136,8 +178,6 @@ export default function ExtractPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="qim">Quantization Index Modulation (QIM)</SelectItem>
-                        <SelectItem value="delta">Delta Additive</SelectItem>
-                        <SelectItem value="hybrid">Hybrid (Auto-detect)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -177,7 +217,7 @@ export default function ExtractPage() {
                     <CardDescription>The following watermark was extracted from the model</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="p-4 bg-muted rounded-md font-mono break-all">{extractedWatermark}</div>
+                    <div className="p-4 bg-muted rounded-md font-mono break-all" style={{ whiteSpace: 'pre-wrap' }}>{extractedWatermark}</div>
                   </CardContent>
                 </Card>
               )}
