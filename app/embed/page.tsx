@@ -1,4 +1,3 @@
-// app/embed/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -74,9 +73,6 @@ export default function EmbedPage() {
       // Generate hash of the watermark
       const watermarkHash = await sha256(watermark)
 
-      // Combine watermark and its hash with a delimiter
-      // Using a delimiter that is unlikely to be part of the actual watermark text,
-      // and not used in binaryToText conversion
       const dataToEmbed = `${watermark}::HASH::${watermarkHash}`
 
       // Apply the selected steganography method
