@@ -14,10 +14,8 @@ import { ModelViewer } from "@/components/model-viewer"
 import { Spinner } from "@/components/ui/spinner"
 import { extractQIM } from "@/lib/steganography/qim"
 import type { GLTF } from "three-stdlib"
+import CryptoJS from "crypto-js" 
 
-// Asumsi fungsi sha256 ini ditambahkan di lib/utils.ts atau sebagai helper lokal
-// Jika Anda ingin menggunakannya di sini, Anda bisa menyertakannya langsung atau mengimpornya.
-// Untuk tujuan demonstrasi ini, mari kita sertakan langsung di sini.
 async function sha256(message: string): Promise<string> {
   const textEncoder = new TextEncoder();
   const data = textEncoder.encode(message);
@@ -35,6 +33,7 @@ export default function ExtractPage() {
   const [extractedWatermark, setExtractedWatermark] = useState<string | null>(null)
   const [gltfModel, setGltfModel] = useState<GLTF | null>(null)
   const [watermarkLength, setWatermarkLength] = useState("20")
+
 
   // Load the GLTFLoader when needed
   useEffect(() => {
@@ -75,10 +74,7 @@ export default function ExtractPage() {
     setIsProcessing(true)
 
     try {
-      // The hash length for SHA-256 is 64 characters (hexadecimal)
-      // The delimiter "::HASH::" is 8 characters long
-      // So, total additional length for hash and delimiter is 64 + 8 = 72 characters.
-      // Adjust the expected length to include the hash and delimiter.
+ 
       const originalWatermarkLength = Number.parseInt(watermarkLength);
       const expectedTotalLength = originalWatermarkLength + 8 + 64; // watermark + '::HASH::' + hash
 
@@ -182,6 +178,7 @@ export default function ExtractPage() {
                     </Select>
                   </div>
 
+                  {/*
                   <div className="space-y-2">
                     <Label htmlFor="length">Expected Watermark Length (characters)</Label>
                     <Input
@@ -193,6 +190,7 @@ export default function ExtractPage() {
                       onChange={(e) => setWatermarkLength(e.target.value)}
                     />
                   </div>
+                  */}
 
                   <Button onClick={handleExtractWatermark} disabled={isProcessing} className="w-full">
                     {isProcessing ? (

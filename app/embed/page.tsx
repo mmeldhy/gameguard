@@ -15,17 +15,10 @@ import { Spinner } from "@/components/ui/spinner"
 import { embedQIM } from "@/lib/steganography/qim"
 import { downloadBlob } from "@/lib/utils"
 import type { GLTF } from "three-stdlib"
+import CryptoJS from "crypto-js" 
 
-// Asumsi fungsi sha256 ini ditambahkan di lib/utils.ts atau sebagai helper lokal
-// Jika Anda ingin menggunakannya di sini, Anda bisa menyertakannya langsung atau mengimpornya.
-// Untuk tujuan demonstrasi ini, mari kita sertakan langsung di sini.
 async function sha256(message: string): Promise<string> {
-  const textEncoder = new TextEncoder();
-  const data = textEncoder.encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hexHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hexHash;
+  return CryptoJS.SHA256(message).toString(CryptoJS.enc.Hex);
 }
 
 export default function EmbedPage() {
